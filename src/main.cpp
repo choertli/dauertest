@@ -2,15 +2,22 @@
 #include "MotorDriver.h"
 #include <Stepper.h>
 #include "WebServer.h"
-// include library to read and write from flash memory
-#include <EEPROM.h>
+#include "HTTPClient.h"
 
-// define the number of bytes you want to access
-#define EEPROM_SIZE 1
+#include <regex>
+#include <iterator>
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <cstring>
+
+using namespace std;
+
+
 
 /*Put your SSID & Password*/
-const char *ssid = "chris";        // Enter SSID here
-const char *password = "ab579042"; //Enter Password here
+const char *ssid = "WLAN_BYOD";        // Enter SSID here
+const char *password = "SegelSCHiff"; //Enter Password here
 
 // Motor A
 int INB = 12; // IN2
@@ -29,6 +36,17 @@ int counter = 0;
 int Steps = 250;
 WebServer server(80);
 
+
+//Your Domain name with URL path or IP address with path
+String serverName = "http://www.oertli.tech/dauertest/counter.php";
+
+// the following variables are unsigned longs because the time, measured in
+// milliseconds, will quickly become a bigger number than can be stored in an int.
+unsigned long lastTime = 0;
+// Timer set to 10 minutes (600000)
+//unsigned long timerDelay = 600000;
+// Set timer to 5 seconds (5000)
+unsigned long timerDelay = 5000;
 const int stepsPerRevolution = 200; // change this to fit the number of steps per revolution
 // for your motor
 
@@ -108,15 +126,114 @@ void setup()
 
   // Set the motor speed (RPMs):
   myStepper.setSpeed(80);
+
+
+HTTPClient http;
+      
+      // Your Domain name with URL path or IP address with path
+      http.begin(serverName);
+
+      // Specify content-type header
+       http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  String payload = "{}"; 
+  int httpResponseCode = http.GET();
+  Serial.print("HTTP Response code: ");
+  Serial.println(httpResponseCode);
+  payload = http.getString();
+  Serial.print("Data1: ");
+  Serial.print(payload);
+   int len=payload.length();
+   Serial.print("len :");
+   Serial.println(len);  
+   char  buf[len + 1] = "0";
+   payload.toCharArray(buf, len + 1);     
+    Serial.println(buf); 
+ 
+ std::string s = buf;//" Counter: 129";
+ 
+
+  std::regex words_regex("Counter:.([0-9]*)");
+ 
+
+  std::smatch matches  ;
+
+  if(std::regex_search(s, matches, words_regex)) {
+        std::cout << "Match found\n";
+        for (size_t i = 0; i < matches.size(); ++i) {
+            std::cout << i << ": '" << matches[i].str() << "'\n";
+
+        }
+    } else {
+        std::cout << "Match not found\n";
+  
+}
+
+ 
+ 
+  // using the stringstream class to insert a string and
+  // extract an int
+  stringstream ss;  
+  ss <<  matches[1].str();  
+  ss >> counter;  
+  Serial.print("counter get: ");
+  Serial.println(counter);
+    
+
 }
 
 void loop()
 {
 
-  digitalWrite(2, HIGH);
 
-  // Step one revolution in one direction:
-  myStepper.step(Steps);
+
+
+
+  //Send an HTTP POST request every 10 minutes
+  if ((millis() - lastTime) > timerDelay) {
+    //Check WiFi connection status
+
+   
+
+
+
+    if(WiFi.status()== WL_CONNECTED){
+      HTTPClient http;
+      
+      // Your Domain name with URL path or IP address with path
+      http.begin(serverName);
+
+      // Specify content-type header
+       http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+      // Data to send with HTTP POST
+      //String httpRequestData = "sensor=BME280&value1=24.25&value2=49.54&value3=1005.14";           
+      // Send HTTP POST request
+      String data = "counter=";
+      data += counter;
+      data += "&steps=";
+      data += 250;
+
+      int httpResponseCode = http.POST(data);
+      
+      // If you need an HTTP request with a content type: application/json, use the following:
+      //http.addHeader("Content-Type", "application/json");
+      //int httpResponseCode = http.POST("{\"api_key\":\"tPmAT5Ab3j7F9\",\"sensor\":\"BME280\",\"value1\":\"24.25\",\"value2\":\"49.54\",\"value3\":\"1005.14\"}");
+
+      // If you need an HTTP request with a content type: text/plain
+      //http.addHeader("Content-Type", "text/plain");
+      //int httpResponseCode = http.POST("Hello, World!");
+     
+      Serial.print("HTTP Response code: ");
+      Serial.println(httpResponseCode);
+        
+      // Free resources
+      http.end();
+    }
+    else {
+      Serial.println("WiFi Disconnected");
+    }
+    lastTime = millis();
+  }
+
 
   delay(2000);
 
@@ -129,6 +246,8 @@ void loop()
   Serial.print("counter:");
   Serial.println(counter);
 
-
+  
+  
   delay(5000);
 }
+  
