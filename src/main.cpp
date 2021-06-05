@@ -13,12 +13,20 @@
 
 using namespace std;
 
-
+//#define SERIALCOM True
+//#define HOME True
+#define WORK True
 
 /*Put your SSID & Password*/
-const char *ssid = "WLAN_BYOD";        // Enter SSID here
+#ifdef WORK
+const char *ssid = "WLAN_BYOD";       // Enter SSID here
 const char *password = "SegelSCHiff"; //Enter Password here
+#endif
 
+#ifdef HOME
+   const char *ssid = "chris";        // Enter SSID here
+   const char *password = "ab579042"; //Enter Password here
+#endif
 // Motor A
 int INB = 12; // IN2
 int INA = 14; // IN1
@@ -34,8 +42,8 @@ int PWM1 = 27;
 
 int counter = 0;
 int Steps = 250;
+int StepsRevers = -280;
 WebServer server(80);
-
 
 //Your Domain name with URL path or IP address with path
 String serverName = "http://www.oertli.tech/dauertest/counter.php";
@@ -61,7 +69,7 @@ String SendHTML(float counter, float Steps)
 {
   String ptr = "<!DOCTYPE html> <html>\n";
   ptr += "<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n";
-  ptr += "<title>ESP32 Weather Report</title>\n";
+  ptr += "<title>ESP32 Dauertest</title>\n";
   ptr += "<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}\n";
   ptr += "body{margin-top: 50px;} h1 {color: #444444;margin: 50px auto 30px;}\n";
   ptr += "p {font-size: 24px;color: #444444;margin-bottom: 10px;}\n";
@@ -100,6 +108,7 @@ void setup()
 
   Serial.begin(115200);
   delay(100);
+
   //connect to your local wi-fi network
   WiFi.begin(ssid, password);
 
@@ -109,145 +118,132 @@ void setup()
     delay(1000);
     Serial.print(".");
   }
+
+#ifdef SERIALCOM
   Serial.println("");
   Serial.println("WiFi connected..!");
   Serial.print("Got IP: ");
   Serial.println(WiFi.localIP());
-
+#endif
   server.on("/", handle_OnConnect);
   server.onNotFound(handle_NotFound);
 
   server.begin();
+#ifdef SERIALCOM
   Serial.println("HTTP server started");
-
+#endif
   pinMode(2, OUTPUT);
+
   Monster.init();  // init Monster shield
   Monster1.init(); // init Monster shield
 
   // Set the motor speed (RPMs):
   myStepper.setSpeed(80);
 
+  HTTPClient http;
 
-HTTPClient http;
-      
-      // Your Domain name with URL path or IP address with path
-      http.begin(serverName);
+  // Your Domain name with URL path or IP address with path
+  http.begin(serverName);
 
-      // Specify content-type header
-       http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-  String payload = "{}"; 
+  // Specify content-type header
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  String payload = "{}";
   int httpResponseCode = http.GET();
+#ifdef SERIALCOM
   Serial.print("HTTP Response code: ");
   Serial.println(httpResponseCode);
+#endif
   payload = http.getString();
-  Serial.print("Data1: ");
+#ifdef SERIALCOM
+  Serial.print("Data: ");
   Serial.print(payload);
-   int len=payload.length();
-   Serial.print("len :");
-   Serial.println(len);  
-   char  buf[len + 1] = "0";
-   payload.toCharArray(buf, len + 1);     
-    Serial.println(buf); 
- 
- std::string s = buf;//" Counter: 129";
- 
+#endif
+  int len = payload.length();
+#ifdef SERIALCOM
+  Serial.print("len :");
+  Serial.println(len);
+#endif
+  char buf[len + 1] = "0";
+  payload.toCharArray(buf, len + 1);
 
-  std::regex words_regex("Counter:.([0-9]*)");
- 
+  // re3gex  to search counter vartiable
+  string s = buf; //" Counter: 129";
+  regex words_regex("Counter:.([0-9]*)");
+  smatch matches;
 
-  std::smatch matches  ;
+  if (regex_search(s, matches, words_regex))
+  {
+    cout << "Match found\n";
+    for (size_t i = 0; i < matches.size(); ++i)
+    {
+      cout << i << ": '" << matches[i].str() << "'\n";
+    }
+  }
+  else
+  {
+    cout << "Match not found\n";
+  }
 
-  if(std::regex_search(s, matches, words_regex)) {
-        std::cout << "Match found\n";
-        for (size_t i = 0; i < matches.size(); ++i) {
-            std::cout << i << ": '" << matches[i].str() << "'\n";
-
-        }
-    } else {
-        std::cout << "Match not found\n";
-  
-}
-
- 
- 
   // using the stringstream class to insert a string and
   // extract an int
-  stringstream ss;  
-  ss <<  matches[1].str();  
-  ss >> counter;  
-  Serial.print("counter get: ");
-  Serial.println(counter);
-    
-
+  stringstream ss;
+  ss << matches[1].str();
+  ss >> counter;
 }
 
 void loop()
 {
 
-
-
-
-
   //Send an HTTP POST request every 10 minutes
-  if ((millis() - lastTime) > timerDelay) {
+  if ((millis() - lastTime) > timerDelay)
+  {
     //Check WiFi connection status
 
-   
-
-
-
-    if(WiFi.status()== WL_CONNECTED){
+    if (WiFi.status() == WL_CONNECTED)
+    {
       HTTPClient http;
-      
+
       // Your Domain name with URL path or IP address with path
       http.begin(serverName);
 
       // Specify content-type header
-       http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+      http.addHeader("Content-Type", "application/x-www-form-urlencoded");
       // Data to send with HTTP POST
-      //String httpRequestData = "sensor=BME280&value1=24.25&value2=49.54&value3=1005.14";           
+      //String httpRequestData = "sensor=BME280&value1=24.25&value2=49.54&value3=1005.14";
       // Send HTTP POST request
       String data = "counter=";
       data += counter;
       data += "&steps=";
-      data += 250;
+      data += Steps;
 
       int httpResponseCode = http.POST(data);
-      
-      // If you need an HTTP request with a content type: application/json, use the following:
-      //http.addHeader("Content-Type", "application/json");
-      //int httpResponseCode = http.POST("{\"api_key\":\"tPmAT5Ab3j7F9\",\"sensor\":\"BME280\",\"value1\":\"24.25\",\"value2\":\"49.54\",\"value3\":\"1005.14\"}");
 
-      // If you need an HTTP request with a content type: text/plain
-      //http.addHeader("Content-Type", "text/plain");
-      //int httpResponseCode = http.POST("Hello, World!");
-     
+
+#ifdef SERIALCOM
       Serial.print("HTTP Response code: ");
       Serial.println(httpResponseCode);
-        
+#endif
+
       // Free resources
       http.end();
     }
-    else {
+    else
+    {
       Serial.println("WiFi Disconnected");
     }
     lastTime = millis();
   }
-
-
-  delay(2000);
-
+  myStepper.step(Steps);
+  delay(200);
   //Step on revolution in the other direction:
-  myStepper.step(-280);
+  myStepper.step(StepsRevers);
   digitalWrite(2, LOW);
-  counter = counter+1;
- 
+  counter = counter + 1;
+
   server.handleClient();
+#ifdef SERIALCOM
   Serial.print("counter:");
   Serial.println(counter);
-
-  
-  
+#endif
   delay(5000);
 }
-  
