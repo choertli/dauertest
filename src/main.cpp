@@ -13,7 +13,7 @@
 
 using namespace std;
 
-//#define SERIALCOM True
+#define SERIALCOM True
 //#define HOME True
 #define WORK True
 
@@ -65,6 +65,7 @@ Stepper myStepper = Stepper(stepsPerRevolution, INA, INB, INA1, INB1);
 MotorDriver Monster = MotorDriver(EN, INA, INB, PWM, CS);
 MotorDriver Monster1 = MotorDriver(EN1, INA1, INB1, PWM1, CS1);
 
+ 
 String SendHTML(float counter, float Steps)
 {
   String ptr = "<!DOCTYPE html> <html>\n";
@@ -137,8 +138,9 @@ void setup()
   Monster.init();  // init Monster shield
   Monster1.init(); // init Monster shield
 
-  // Set the motor speed (RPMs):
-  myStepper.setSpeed(80);
+// Set the motor speed (RPMs):
+  myStepper.setSpeed(70);
+ 
 
   HTTPClient http;
 
@@ -245,5 +247,5 @@ void loop()
   Serial.print("counter:");
   Serial.println(counter);
 #endif
-  delay(5000);
+  delay(4000);
 }
