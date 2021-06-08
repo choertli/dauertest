@@ -1,3 +1,8 @@
+//Endurance Test for Tango stepper motor
+//author Christian Oertli
+// github  dauertest
+
+
 #include <Arduino.h>
 #include "MotorDriver.h"
 #include <Stepper.h>
@@ -43,8 +48,8 @@ int PWM1 = 27;
 int counter = 0;
 int Steps = 250;
 int StepsRevers = -280;
-WebServer server(80);
 
+WebServer server(80);
 //Your Domain name with URL path or IP address with path
 String serverName = "http://www.oertli.tech/dauertest/counter.php";
 
@@ -54,7 +59,7 @@ unsigned long lastTime = 0;
 // Timer set to 10 minutes (600000)
 //unsigned long timerDelay = 600000;
 // Set timer to 5 seconds (5000)
-unsigned long timerDelay = 5000;
+unsigned long timerDelay = 60000;
 const int stepsPerRevolution = 200; // change this to fit the number of steps per revolution
 // for your motor
 
@@ -64,7 +69,9 @@ int stepCount = 0; // number of steps the motor has taken
 Stepper myStepper = Stepper(stepsPerRevolution, INA, INB, INA1, INB1);
 MotorDriver Monster = MotorDriver(EN, INA, INB, PWM, CS);
 MotorDriver Monster1 = MotorDriver(EN1, INA1, INB1, PWM1, CS1);
-
+// Set the motor speed (RPMs):
+ 
+ 
  
 String SendHTML(float counter, float Steps)
 {
@@ -138,9 +145,7 @@ void setup()
   Monster.init();  // init Monster shield
   Monster1.init(); // init Monster shield
 
-// Set the motor speed (RPMs):
-  myStepper.setSpeed(70);
- 
+
 
   HTTPClient http;
 
@@ -235,8 +240,9 @@ void loop()
     }
     lastTime = millis();
   }
+   myStepper.setSpeed(80);
   myStepper.step(Steps);
-  delay(200);
+  delay(500);
   //Step on revolution in the other direction:
   myStepper.step(StepsRevers);
   digitalWrite(2, LOW);
@@ -247,5 +253,7 @@ void loop()
   Serial.print("counter:");
   Serial.println(counter);
 #endif
-  delay(4000);
+  Monster.off();  // init Monster shield
+  Monster1.off(); // init Monster shield
+  delay(3000);
 }

@@ -41,8 +41,8 @@ void MotorDriver::CCW()
 
 void MotorDriver::off()
 {
-    digitalWrite(cw, HIGH);
-    digitalWrite(ccw, HIGH);
+    digitalWrite(cw, LOW);
+    digitalWrite(ccw, LOW);
     digitalWrite(en, HIGH);
     digitalWrite(pwm, HIGH);
 }
